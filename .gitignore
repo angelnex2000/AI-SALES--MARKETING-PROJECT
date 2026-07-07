@@ -1,0 +1,43 @@
+# === Secrets / env ===
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# === Python (apps/api) ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+
+# ML / model artifacts
+apps/api/agents/**/artifacts/*
+!apps/api/agents/**/artifacts/.gitkeep
+
+# === Node / Next.js (apps/web) ===
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+.npm/
+
+# === Editors / OS ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# === Claude local settings (keep project instructions, drop local state) ===
+.claude/settings.local.json
