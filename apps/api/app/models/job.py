@@ -4,10 +4,10 @@ from enum import Enum
 from typing import Any
 
 from sqlalchemy import DateTime, ForeignKey, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import Base, JSONColumn, TenantMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class JobStatus(str, Enum):
@@ -30,8 +30,14 @@ class Job(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     job_type: Mapped[str] = mapped_column(String)
     """e.g. lead_intelligence, outreach_draft, revenue_forecast"""
     lead_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id"), nullable=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    """Who triggered this run. Nullable because some jobs are system-initiated
+    (a scheduled forecast refresh has no clicker). Needed for the AI Center's
+    usage stats and to attribute the resulting timeline activity to a person."""
     status: Mapped[JobStatus] = mapped_column(default=JobStatus.PENDING, index=True)
-    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONColumn, nullable=True)
     error_message: Mapped[str | None] = mapped_column(String, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

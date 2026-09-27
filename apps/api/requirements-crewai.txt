@@ -1,0 +1,37 @@
+# Phase 9 Module 4 — optional CrewAI extra.
+#
+# DO NOT `pip install -r requirements.txt -r requirements-crewai.txt` into the
+# same environment as it stands. Measured on 2026-08-06 against crewai 1.15.12:
+# installing it upgraded four pinned packages and left the application unable
+# to start.
+#
+#   package     pinned here   crewai wants      result
+#   ---------   -----------   ---------------   ---------------------------------
+#   starlette   0.37.2        >=0.49.1          fastapi 0.111.0 requires <0.38.0,
+#                                               so `APIRouter()` raised
+#                                               TypeError: Router.__init__() got an
+#                                               unexpected keyword argument 'on_startup'
+#                                               — every route, at import.
+#   pydantic    2.8.2         >=2.11.9,<2.13
+#   openai      1.35.13       >=2.0.0
+#   httpx       0.27.0        >=0.27.1
+#
+# The whole test suite failed at conftest import until the pins were restored
+# with `pip install --force-reinstall -r requirements.txt`.
+#
+# So the skeleton in `agents/crew/` is written against CrewAI but guarded: the
+# API boots without it and only the crew endpoint returns 503. To actually run
+# a crew, pick one of:
+#
+#   1. Separate environment/service. Run the crew worker from its own venv or
+#      container with its own pins, talking to the same database. Cheapest, and
+#      it keeps a CrewAI upgrade from being able to take the API down.
+#   2. Upgrade the web stack. fastapi>=0.115 + pydantic 2.12 + openai 2.x is a
+#      real migration — openai 1.x -> 2.x changes client APIs the Outreach and
+#      Embeddings agents use — and should be its own piece of work with the
+#      733 existing tests as the acceptance check, not a side effect of adding
+#      an orchestration library.
+#
+# Until one of those happens, treat this file as documentation of the cost.
+
+crewai==1.15.12

@@ -3,10 +3,10 @@ from enum import Enum
 from typing import Any
 
 from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import Base, JSONColumn, TenantMixin, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class AuditCategory(str, Enum):
@@ -36,4 +36,4 @@ class AuditLog(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
-    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONColumn, nullable=True)

@@ -1,0 +1,39 @@
+# Tooling config only. Runtime dependencies stay in requirements.txt /
+# requirements-dev.txt — the Dockerfile installs from those, so this file
+# deliberately declares no [project] table and no build backend.
+
+[tool.ruff]
+# 120, not the ruff default 88 — matches how the Phase 4/5 code was already
+# written, so adopting lint doesn't reflow files nobody is changing.
+line-length = 120
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort — import order, so diffs stay stable across modules
+    "UP",  # pyupgrade — keep to 3.12 idioms (X | None, not Optional[X])
+    "B",   # flake8-bugbear
+]
+# B008 fires on FastAPI's `Depends()` in argument defaults, which is the
+# whole dependency-injection idiom — not a bug here.
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "agents"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "agents"]
+# Service and router tests run against the async engine; without this every
+# test needs an explicit @pytest.mark.asyncio.
+asyncio_mode = "auto"
+markers = [
+    "postgres: needs a real PostgreSQL (pgvector similarity, native ENUM behaviour)",
+]
+filterwarnings = [
+    # python-jose calls datetime.utcnow() internally; nothing we can fix here,
+    # and it drowns out warnings that are ours.
+    "ignore:datetime.datetime.utcnow:DeprecationWarning:jose.jwt",
+]

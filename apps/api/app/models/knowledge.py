@@ -2,7 +2,7 @@ import uuid
 from enum import Enum
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -72,7 +72,12 @@ class KnowledgeEmbedding(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin)
         UUID(as_uuid=True), ForeignKey("knowledge_chunks.id"), index=True
     )
     embedding_model: Mapped[str] = mapped_column(String)
-    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+    embedding: Mapped[list[float]] = mapped_column(
+        # pgvector on Postgres; a plain JSON array on SQLite so the schema can
+        # be created for tests. Similarity search is Postgres-only — SQLite has
+        # no `<=>` operator — so any test touching retrieval needs real Postgres.
+        Vector(EMBEDDING_DIM).with_variant(JSON(), "sqlite")
+    )
 
 
 class RAGRetrievalLog(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):

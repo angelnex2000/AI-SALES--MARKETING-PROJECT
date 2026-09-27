@@ -1,0 +1,6 @@
+# Repo-root convenience entrypoint. All Python code lives in apps/api.
+#   pip install -r requirements.txt              # runtime
+#   pip install -r apps/api/requirements-dev.txt # runtime + test tooling
+# The frontend (apps/web) is Node — see apps/web/package.json.
+
+-r apps/api/requirements.txt

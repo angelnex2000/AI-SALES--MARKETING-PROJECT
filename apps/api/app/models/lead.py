@@ -1,12 +1,19 @@
 import uuid
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import (
+    Base,
+    JSONColumn,
+    TenantMixin,
+    TimestampMixin,
+    UUIDPrimaryKeyMixin,
+)
 
 
 class LeadStatus(str, Enum):
@@ -60,6 +67,15 @@ class Lead(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     """The record id in the tenant's external CRM. The CRM is the source of
     truth for this lead's core identity fields; we own AI insights and push
     status/notes/meetings back (see Integration, IntegrationSyncLog)."""
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    """Soft delete. Leads are never hard-deleted: 17 tables reference leads.id
+    with no ON DELETE rule, so a real DELETE raises a ForeignKeyViolation the
+    moment a lead has a note, deal, email, or AI output. Cascading instead
+    would destroy append-only AI history and the closed-lost outcomes the
+    feedback-learning model retrains on. Archived leads are filtered out by
+    lead_service, so they vanish from the app while their history survives."""
 
 
 class Contact(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
@@ -77,6 +93,32 @@ class Contact(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     job_title: Mapped[str | None] = mapped_column(String, nullable=True)
     department: Mapped[str | None] = mapped_column(String, nullable=True)
     is_primary: Mapped[bool] = mapped_column(default=False)
+    do_not_contact: Mapped[bool] = mapped_column(default=False, index=True)
+    """This person asked not to be emailed. **Blocks sending, in code** —
+    `outreach_service.send_draft` refuses rather than warns.
+
+    Added when email delivery became real. Until then the Reply Intent Agent
+    could classify an `unsubscribe` and suggest `do_not_contact`, but there was
+    nowhere to record it and nothing to enforce it — harmless while nothing
+    sent, a compliance failure the moment something did.
+
+    Scoped to the **contact**, not the lead: the person who wrote "remove me"
+    asked for their own address to stop, and suppressing every colleague at the
+    same company reads their request far wider than they made it."""
+    do_not_contact_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    do_not_contact_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    """e.g. `reply_intent:unsubscribe` or `manual`. Recorded because "why is
+    this address suppressed" has to be answerable months later, and an opt-out
+    set by a regex should be distinguishable from one a human confirmed."""
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    """Soft delete, same reasoning as Lead.archived_at. `email_drafts.contact_id`
+    references this row with no ON DELETE rule, so a hard delete of a contact
+    who already has a draft raises a ForeignKeyViolation — and a pending Gate 2
+    draft that lost its recipient is worse than one whose contact is archived."""
 
 
 class AIOutputMixin:
@@ -110,17 +152,54 @@ class ResearchReport(Base, UUIDPrimaryKeyMixin, TenantMixin, AIOutputMixin, Time
     summary: Mapped[str] = mapped_column(Text)
     industry_insights: Mapped[str | None] = mapped_column(Text, nullable=True)
     company_size_estimate: Mapped[str | None] = mapped_column(String, nullable=True)
-    recent_news: Mapped[str | None] = mapped_column(Text, nullable=True)
-    pain_points: Mapped[str | None] = mapped_column(Text, nullable=True)
-    sources: Mapped[str | None] = mapped_column(Text, nullable=True)
-    """Citations backing the claims above — JSON list of URLs/references."""
+
+    # The three list fields below are JSON, not Text. The whole point of a
+    # structured report is that Buying Signals, ICP Matching and Outreach
+    # consume it directly; a JSON array stuffed into a Text column would force
+    # every one of them to re-parse a string with no shape guarantee.
+    recent_news: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONColumn, nullable=True)
+    """EVIDENCED claims: `[{"claim": ..., "source": ...}]`. Each item is
+    something we actually found, with where we found it."""
+    pain_points: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONColumn, nullable=True)
+    """INFERRED hypotheses: `[{"statement": ..., "basis": ...}]`. Deliberately
+    a different shape from recent_news so a guess can never be mistaken for a
+    fact. These feed the Outreach Agent, whose output passes Gate 2 and reaches
+    a customer — presenting an inference as fact there means telling a prospect
+    something we invented."""
+    sales_opportunities: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSONColumn, nullable=True
+    )
+    """INFERRED, same shape as pain_points."""
+    sources: Mapped[list[str] | None] = mapped_column(JSONColumn, nullable=True)
+    """Every source consulted, for the research source-citation safety rule
+    (a rep may repeat these claims to a prospect)."""
 
 
 class LeadScore(Base, UUIDPrimaryKeyMixin, TenantMixin, AIOutputMixin, TimestampMixin):
+    """The score *and* the reasons for it.
+
+    Explanation columns live here rather than in a separate
+    `lead_explanations` table: the relationship is strictly 1:1 with the
+    prediction, and splitting them lets an explanation drift out of sync with
+    the score it claims to explain — the one failure this feature exists to
+    prevent.
+    """
+
     __tablename__ = "lead_scores"
 
     lead_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id"), index=True)
     score: Mapped[int] = mapped_column(Integer)
+    positive_factors: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONColumn, nullable=True)
+    """`[{label, impact, source, detail}]` — what raised the score, each with
+    its measured contribution in score points."""
+    negative_factors: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONColumn, nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """What the rep should do next. Conditioned on confidence as well as
+    score — acting on a barely-discriminating model teaches a team to
+    distrust the product."""
+    baseline_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    """What a lead with no distinguishing attributes scores. Without it,
+    "+8 for industry" has no reference point."""
 
 
 class BuyingSignal(Base, UUIDPrimaryKeyMixin, TenantMixin, AIOutputMixin, TimestampMixin):

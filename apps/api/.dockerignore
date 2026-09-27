@@ -1,0 +1,54 @@
+# The Dockerfile ends in `COPY . .`, so anything not excluded here is baked
+# into a published image layer. Image layers are permanent and world-readable
+# on a public registry: deleting a file in a later layer does NOT remove it —
+# `docker save` still recovers it. Treat this file as a publication boundary,
+# not a build optimisation.
+
+# --- Credentials: the reason this file exists -----------------------------
+# `apps/api/.env` carries live OpenAI / Anthropic / TinyFish / Mailjet SMTP
+# credentials. It is gitignored, which protects the repo and does nothing at
+# all for a docker build — the build context reads the working directory, not
+# git. `.env.example` is deliberately NOT excluded: it is placeholders only and
+# documents every setting in core/config.py.
+.env
+.env.*
+!.env.example
+
+# --- Local databases ------------------------------------------------------
+# dev.db holds seeded users with a known password; test.db is suite residue.
+# Neither belongs in an image, and a shipped SQLite file would also mask a
+# missing DATABASE_URL by letting the app start against the wrong database.
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Virtualenv -----------------------------------------------------------
+# Built on Windows against python3.12 — the binaries cannot run in a Linux
+# image, and the Dockerfile pip-installs from requirements.txt anyway. Copying
+# it adds hundreds of megabytes of unusable weight.
+.venv/
+venv/
+
+# --- Trained model artifacts ---------------------------------------------
+# Gitignored and rebuilt by `python -m agents.<agent>.train`. Shipping a stale
+# model silently would be worse than shipping none: the agents fall back to a
+# transparent heuristic and say so, which a stale artifact would not.
+agents/*/artifacts/
+data/
+
+# --- Build/test residue ---------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+tests/
+
+# --- Editor / OS ----------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

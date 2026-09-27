@@ -17,6 +17,7 @@ from app.models import (  # noqa: F401,E501
     campaign,
     company,
     crm,
+    deal,
     feedback,
     forecast,
     integration,

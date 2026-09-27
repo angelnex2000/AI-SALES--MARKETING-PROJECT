@@ -1,0 +1,33 @@
+# The Dockerfile ends in `COPY . .`, so anything not excluded here is baked
+# into a published image layer — permanent and world-readable on a public
+# registry, recoverable with `docker save` even if a later layer deletes it.
+
+# --- Environment ----------------------------------------------------------
+# `.env.local` carries NEXT_PUBLIC_API_URL and NEXT_PUBLIC_MOCK_ROLE. The mock
+# role is the one that matters: it seeds a fake authenticated user so pages
+# render without a backend, and shipping it in an image would hand every
+# visitor a pre-authenticated admin session in the UI.
+.env
+.env.*
+!.env.example
+
+# --- Dependencies and build output ----------------------------------------
+# node_modules is reinstalled from package-lock.json in the image; copying the
+# host's copy risks platform-specific binaries built for Windows.
+node_modules/
+.next/
+out/
+build/
+
+# --- Residue --------------------------------------------------------------
+npm-debug.log*
+yarn-error.log*
+.eslintcache
+coverage/
+
+# --- Editor / OS ----------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

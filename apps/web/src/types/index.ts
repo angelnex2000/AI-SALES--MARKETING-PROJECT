@@ -2,9 +2,11 @@ export type Role = "admin" | "sales_manager" | "sales_executive" | "marketing";
 
 export interface User {
   id: string;
-  name: string;
+  // Matches the backend MeResponse (app/schemas/auth.py): full_name + company_id.
+  full_name: string;
   email: string;
   role: Role;
+  company_id: string;
 }
 
 export interface Lead {

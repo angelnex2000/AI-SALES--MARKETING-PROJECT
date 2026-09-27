@@ -1,13 +1,30 @@
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import JSON, DateTime, ForeignKey, func
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
+
+# JSONB on Postgres, plain JSON on SQLite. Without the variant the schema
+# cannot be created off Postgres at all — `CompileError: can't render element
+# of type JSONB` — which made the whole test suite impossible to run locally.
+# Use this everywhere instead of importing JSONB directly.
+JSONColumn = JSONB().with_variant(JSON(), "sqlite")
 
 
 class Base(DeclarativeBase):
-    pass
+    # Persist enums by VALUE, not by name. SQLAlchemy's default stores
+    # `Role.SALES_EXECUTIVE` as "SALES_EXECUTIVE", but every other layer —
+    # the JWT role claim, require_role(), the frontend's nav rules, the
+    # documented API contract — uses "sales_executive". Without this, the
+    # database is the one place holding a different spelling, so raw SQL,
+    # analytics queries, seed scripts, and CRM syncs all silently miss.
+    # Declared once here so all 21 enum columns stay consistent.
+    type_annotation_map = {
+        enum.Enum: SAEnum(enum.Enum, values_callable=lambda e: [member.value for member in e]),
+    }
 
 
 class UUIDPrimaryKeyMixin:

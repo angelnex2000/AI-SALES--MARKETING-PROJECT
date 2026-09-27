@@ -1,0 +1,9 @@
+# Development / test tooling for apps/api.
+# Install:  pip install -r requirements-dev.txt   (includes the runtime deps)
+
+-r requirements.txt
+
+pytest==8.3.2
+pytest-asyncio==0.23.8           # async router/service tests against the async engine
+aiosqlite==0.20.0                # in-memory async DB for tests that don't need Postgres
+ruff==0.5.5                      # lint + format

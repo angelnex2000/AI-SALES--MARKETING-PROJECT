@@ -1,0 +1,26 @@
+product_id,product_name,product_line,unit_type,list_price,is_active
+1,Analytics Connector,Analytics,Per Org / Year,8550.0,1
+2,Professional Services Professional,Professional Services,Per Seat / Month,2500.0,1
+3,Integrations Enterprise,Integrations,One-Time,5450.0,1
+4,Support & Success Suite,Support & Success,Per Seat / Month,1150.0,1
+5,Professional Services Insights,Professional Services,Per Org / Year,5650.0,1
+6,Core Platform Automation,Core Platform,Per Seat / Month,1800.0,1
+7,Analytics Insights,Analytics,Per Seat / Month,5200.0,1
+8,Analytics Enterprise,Analytics,Per Seat / Year,5300.0,1
+9,Core Platform Starter,Core Platform,One-Time,4350.0,1
+10,Professional Services Suite,Professional Services,Per Seat / Year,4850.0,1
+11,Core Platform Enterprise,Core Platform,Per Seat / Year,6950.0,0
+12,Integrations Connector,Integrations,One-Time,7250.0,1
+13,Analytics Compliance,Analytics,Per Org / Year,4600.0,1
+14,Analytics Growth,Analytics,Per Seat / Month,5500.0,1
+15,Core Platform Compliance,Core Platform,Per Org / Year,8400.0,1
+16,Integrations Suite,Integrations,Per Seat / Month,1350.0,1
+17,Integrations Growth,Integrations,Per Seat / Year,1300.0,1
+18,Core Platform Growth,Core Platform,Per Org / Year,1050.0,1
+19,Core Platform Workflow,Core Platform,Per Seat / Year,6000.0,1
+20,Analytics Professional,Analytics,Per Org / Year,3950.0,1
+21,Professional Services Workflow,Professional Services,One-Time,7050.0,1
+22,Integrations Professional,Integrations,One-Time,6150.0,1
+23,Support & Success Insights,Support & Success,Per Seat / Month,3200.0,1
+24,Core Platform Suite,Core Platform,One-Time,8100.0,1
+25,Core Platform Insights,Core Platform,Per Org / Year,6950.0,1

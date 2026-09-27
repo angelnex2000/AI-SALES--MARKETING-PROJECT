@@ -2,10 +2,9 @@ from enum import Enum
 from typing import Any
 
 from sqlalchemy import String
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import Base, JSONColumn, TimestampMixin, UUIDPrimaryKeyMixin
 
 
 class ModelStatus(str, Enum):
@@ -31,5 +30,5 @@ class ModelRegistryEntry(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     """e.g. lead_scoring, reply_intent, revenue_forecasting, embeddings"""
     model_version: Mapped[str] = mapped_column(String, unique=True, index=True)
     file_path: Mapped[str] = mapped_column(String)
-    metrics: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    metrics: Mapped[dict[str, Any] | None] = mapped_column(JSONColumn, nullable=True)
     status: Mapped[ModelStatus] = mapped_column(default=ModelStatus.TRAINING, index=True)

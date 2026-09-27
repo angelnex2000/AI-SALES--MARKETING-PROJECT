@@ -1,12 +1,19 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
+from typing import Any
 
-from sqlalchemy import Date, ForeignKey, Integer, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TenantMixin, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.base import (
+    Base,
+    JSONColumn,
+    TenantMixin,
+    TimestampMixin,
+    UUIDPrimaryKeyMixin,
+)
 
 
 class CampaignStatus(str, Enum):
@@ -53,9 +60,28 @@ class CampaignTemplate(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
 
 
 class AudienceSegment(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
+    """Who a campaign targets, and the plan for reaching them.
+
+    The selection criteria and the resulting plan live here rather than in a
+    separate `campaign_recommendations` table: this row already *is* "who this
+    campaign is for", and a parallel table would let the two disagree about
+    the same campaign.
+    """
+
     __tablename__ = "audience_segments"
 
     campaign_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("campaigns.id"), index=True)
     industry: Mapped[str | None] = mapped_column(String, nullable=True)
     min_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
     region: Mapped[str | None] = mapped_column(String, nullable=True)
+    criteria: Mapped[dict[str, Any] | None] = mapped_column(JSONColumn, nullable=True)
+    """Thresholds actually used, stored so a campaign remains reproducible
+    after the tenant changes their defaults."""
+    selected_lead_ids: Mapped[list[str] | None] = mapped_column(JSONColumn, nullable=True)
+    """A **snapshot**, not a saved query. Re-running the query at send time
+    would silently change the audience between approval and delivery — a
+    marketing lead approves a list of 42 and 300 receive it."""
+    strategy: Mapped[dict[str, Any] | None] = mapped_column(JSONColumn, nullable=True)
+    """The Campaign Agent's plan: tone, CTA, sequence length, and the case
+    study RAG actually returned (never one the agent named itself)."""
+    planned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
